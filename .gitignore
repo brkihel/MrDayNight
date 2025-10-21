@@ -1,0 +1,64 @@
+# === Valheim Mod Development (BepInEx + Jotunn) ===
+
+# Build directories
+/bin/
+/obj/
+/out/
+/publish/
+/build/
+/libraries/
+
+# Visual Studio / Rider project files
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.iml
+*.DotSettings
+*.vsconfig
+
+# Temporary / Cache files
+*.log
+*.tmp
+*.bak
+*.old
+*.cache
+*.db
+*.lock
+
+# NuGet / Packages
+packages/
+*.nupkg
+*.nuspec
+project.lock.json
+
+# OS junk files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup configs
+*.cfg.old
+*.cfg.bak
+
+# Ignore compiled outputs
+*.dll
+*.pdb
+*.mdb
+
+# Allow only source and documentation files
+!README.md
+!CHANGELOG.md
+!LICENSE
+!*.cs
+!*.csproj
+!*.props
+!*.targets
+!*.json
+!*.md
+
+# Optional: ignore local environment props
+Environment.props
+DoPrebuild.props

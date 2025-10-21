@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net48</TargetFramework>
+		<RootNamespace>MrDayNight</RootNamespace>
+		<AssemblyName>MrDayNight</AssemblyName>
+		<LangVersion>10</LangVersion>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<Optimize>false</Optimize>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<Optimize>true</Optimize>
+		<DebugType>none</DebugType>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Xml" />
+		<Reference Include="System.Data" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- NuGet do Jötunn -->
+		<PackageReference Include="JotunnLib" Version="2.26.1" />
+
+		<!-- BepInEx / Harmony -->
+		<Reference Include="BepInEx">
+			<HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<Reference Include="0Harmony">
+			<HintPath>$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<!-- Jötunn principal -->
+		<Reference Include="Jotunn">
+			<HintPath>$(VALHEIM_INSTALL)\BepInEx\plugins\Jotunn.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<!-- Assemblies do Valheim -->
+		<Reference Include="assembly_valheim_publicized">
+			<HintPath>$(VALHEIM_INSTALL)\valheim_Data\Managed\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<Reference Include="UnityEngine">
+			<HintPath>$(VALHEIM_INSTALL)\valheim_Data\Managed\UnityEngine.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(VALHEIM_INSTALL)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Message Text="Copiando MrDayNight.dll para C:\ValheimModding\MeusMods\MrDayNight..." Importance="high" />
+		<MakeDir Directories="C:\ValheimModding\MeusMods\MrDayNight" Condition="!Exists('C:\ValheimModding\MeusMods\MrDayNight')" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\ValheimModding\MeusMods\MrDayNight" />
+
+		<Copy Condition="'$(Configuration)' == 'Debug'"
+			  SourceFiles="$(TargetDir)$(TargetName).pdb"
+			  DestinationFolder="C:\ValheimModding\MeusMods\MrDayNight"
+			  ContinueOnError="true" />
+
+		<Copy Condition="'$(Configuration)' == 'Debug' AND Exists('$(TargetDir)$(TargetName).dll.mdb')"
+			  SourceFiles="$(TargetDir)$(TargetName).dll.mdb"
+			  DestinationFolder="C:\ValheimModding\MeusMods\MrDayNight"
+			  ContinueOnError="true" />
+
+	</Target>
+
+</Project>
