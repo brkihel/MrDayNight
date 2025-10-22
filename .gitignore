@@ -1,11 +1,11 @@
 # === Valheim Mod Development (BepInEx + Jotunn) ===
 
 # Build directories
-/bin/
-/obj/
-/out/
-/publish/
-/build/
+/src/MrDayNight/bin/
+/src/MrDayNight/obj/
+/src/MrDayNight/out/
+/src/MrDayNight/publish/
+/src/MrDayNight/build/
 /libraries/
 
 # Visual Studio / Rider project files
