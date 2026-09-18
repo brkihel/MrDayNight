@@ -14,6 +14,11 @@
 - Config changes apply immediately, with no restart.
 - Defaults changed to 1260s day / 540s night, which reproduces vanilla exactly.
 - Minimum length lowered from 100s to 10s, for testing.
+- The internal safety clamp no longer distorts extreme ratios: it was pinning the
+  night fraction to 2%..98%, which silently changed configs like 7200s day with
+  10s night. With the 10s..7200s limits the extreme ratio is 0.139%, so the clamp
+  is now 0.1%..99.9% and never binds on a valid configuration. If it ever does,
+  it says so in the log instead of changing the cycle quietly.
 
 # 🧾 CHANGELOG
 

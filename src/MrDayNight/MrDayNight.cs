@@ -38,8 +38,24 @@ namespace MrDayNight
             Math.Max(1f, DayLength.Value + NightLength.Value);
 
         /// <summary>Quanto do ciclo e noite, de 0 a 1. Vanilla: 0.30.</summary>
-        internal static float FracaoNoite =>
-            Mathf_Clamp(NightLength.Value / CicloTotal, 0.02f, 0.98f);
+        /// <remarks>
+        /// O clamp existe so para o remapeamento nunca dividir por zero. Com os
+        /// limites de 10s..7200s de cada lado, a fracao extrema possivel e
+        /// 0.00139, entao ele nunca chega a distorcer uma configuracao valida —
+        /// qualquer combinacao aceita pela config e aplicada como pedida.
+        /// </remarks>
+        internal static float FracaoNoite
+        {
+            get
+            {
+                float bruta = NightLength.Value / CicloTotal;
+                float usada = Mathf_Clamp(bruta, 0.001f, 0.999f);
+                if (Log != null && usada != bruta)
+                    Log.LogWarning($"Proporcao fora do que da para representar: pedida " +
+                                   $"{bruta:P3} de noite, aplicada {usada:P3}.");
+                return usada;
+            }
+        }
 
         // Clamp sem depender do UnityEngine so para isto.
         private static float Mathf_Clamp(float v, float min, float max) =>
