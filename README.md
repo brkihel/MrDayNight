@@ -14,11 +14,50 @@ Perfect for both **server administrators** and **solo adventurers**, it provides
 ---
 
 ### ⚙️ Features
-- ✅ Customize **day length** and **night length** individually (in seconds).  
+- ✅ Customize **day length** and **night length** individually (in seconds) — the
+  proportion between them is really changed, not just the total cycle.
 - ✅ Fully **synchronized across clients** when used on a server with [Jötunn](https://valheim.thunderstore.io/package/ValheimModding/Jotunn/).  
 - ✅ Automatically enforces **server settings** — players cannot override them.  
 - ✅ Works in **single player** (local settings) and **multiplayer** (server-synced).  
-- ✅ Clean logs and 100% compatible with all environment mods.
+- ✅ Config changes apply immediately, without restarting the game.
+- ✅ Defaults reproduce vanilla exactly, so installing it changes nothing until
+  you configure it.
+
+---
+
+### 🔍 How it works
+
+Valheim has no "night length". It has a total cycle (`EnvMan.m_dayLengthSec`) and
+a fixed proportion hidden inside `EnvMan.RescaleDayFraction`: the raw fraction
+`0.15..0.85` is remapped to `0.25..0.75`, and `CalculateDay` / `CalculateNight`
+compare against `0.25` and `0.75`. That is why vanilla is always **70% day and
+30% night**, no matter how long the day is.
+
+MrDayNight sets the total cycle to `DayLength + NightLength` **and** moves those
+remapping boundaries so the proportion matches what you asked for. Night stays
+centred on midnight — half at the end of the cycle, half at the start — which is
+how the game already behaves.
+
+Because the output contract is unchanged (`0.25..0.75` is still daytime), every
+other system keeps working untouched: lighting, spawns, `IsDay()`, `IsNight()`,
+`IsAfternoon()`. Sleeping is also corrected, so you wake up at the configured
+sunrise instead of the hardcoded one.
+
+---
+
+### 🔀 Using it alongside world-tweak mods
+
+Some mods also set the day length — **ZenWorldSettings**, for example, has its own
+`Day Length Seconds`. MrDayNight loads after it and takes control of the cycle,
+writing its value last. It says so in the log on startup, so you always know who
+is in charge:
+
+```
+ZenWorldSettings 1.13.0 also controls day length ... MrDayNight takes over
+```
+
+If you would rather let the other mod drive, set `Tempo.Enabled = false` here and
+MrDayNight steps aside completely — the game goes back to its original cycle.
 
 ---
 

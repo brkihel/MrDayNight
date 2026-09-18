@@ -1,70 +1,128 @@
-﻿using BepInEx;
+using System;
+using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using Jotunn.Extensions;
 using Jotunn.Managers;
 using Jotunn.Utils;
-using UnityEngine;
 
 namespace MrDayNight
 {
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(Jotunn.Main.ModGuid)]
-    [SynchronizationMode(AdminOnlyStrictness.IfOnServer)] // só sincroniza/trava se o servidor tiver Jötunn
+    // Dependencia fraca so para ordenar a carga: o ZenWorldSettings tambem
+    // escreve EnvMan.m_dayLengthSec, e queremos entrar depois dele.
+    [BepInDependency(GuidZenWorldSettings, BepInDependency.DependencyFlags.SoftDependency)]
+    [SynchronizationMode(AdminOnlyStrictness.IfOnServer)]
     public class MrDayNight : BaseUnityPlugin
     {
         public const string PluginGUID = "genesisproj.mrdaynight";
         public const string PluginName = "MrDayNight";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "2.0.0";
 
-        internal static ManualLogSource Log; // logger acessível de outros arquivos
+        internal const string GuidZenWorldSettings = "ZenDragon.ZenWorldSettings";
+
+        internal static ManualLogSource Log;
+        internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<float> DayLength;
         internal static ConfigEntry<float> NightLength;
 
         private Harmony harmony;
 
+        internal static bool Ativo => Enabled != null && Enabled.Value;
+
+        /// <summary>Ciclo completo em segundos: dia + noite.</summary>
+        internal static float CicloTotal =>
+            Math.Max(1f, DayLength.Value + NightLength.Value);
+
+        /// <summary>Quanto do ciclo e noite, de 0 a 1. Vanilla: 0.30.</summary>
+        internal static float FracaoNoite =>
+            Mathf_Clamp(NightLength.Value / CicloTotal, 0.02f, 0.98f);
+
+        // Clamp sem depender do UnityEngine so para isto.
+        private static float Mathf_Clamp(float v, float min, float max) =>
+            v < min ? min : (v > max ? max : v);
+
         private void Awake()
         {
-            Log = Logger; // torna o logger acessível externamente
+            Log = Logger;
 
-            // Cria configs sincronizadas automaticamente pelo Jötunn
-            var dayRange = new AcceptableValueRange<float>(100f, 7200f);
-            var nightRange = new AcceptableValueRange<float>(100f, 7200f);
+            Enabled = Config.BindConfig("Tempo", "Enabled", true,
+                "Se desligado, o jogo volta ao ciclo original (dia 70%, noite 30%).",
+                synced: true);
 
-            DayLength = Config.BindConfig(
-                "Tempo", "DayLength",
-                1200f,
-                "Duração do dia em segundos (default = 1200)",
-                synced: true,
-                acceptableValues: dayRange
-            );
+            // Os padroes reproduzem o vanilla exatamente: 1800s de ciclo,
+            // divididos em 70% de dia e 30% de noite. Instalar o mod sem
+            // configurar nada nao muda nada.
+            DayLength = Config.BindConfig("Tempo", "DayLength", 1260f,
+                "Duracao do dia em segundos. Vanilla: 1260 (70% de 1800).",
+                synced: true, acceptableValues: new AcceptableValueRange<float>(10f, 7200f));
 
-            NightLength = Config.BindConfig(
-                "Tempo", "NightLength",
-                600f,
-                "Duração da noite em segundos (default = 600)",
-                synced: true,
-                acceptableValues: nightRange
-            );
+            NightLength = Config.BindConfig("Tempo", "NightLength", 540f,
+                "Duracao da noite em segundos. Vanilla: 540 (30% de 1800).",
+                synced: true, acceptableValues: new AcceptableValueRange<float>(10f, 7200f));
 
-            // Log inicial
-            Log.LogInfo($"[{PluginName}] Inicializando v{PluginVersion}");
+            Log.LogInfo($"[{PluginName}] v{PluginVersion} iniciando.");
+            AvisarSobreOutrosMods();
 
-            // Hook de sincronização Jötunn
+            // Mexer no config em jogo deve valer na hora, sem reiniciar.
+            Enabled.SettingChanged += (_, __) => Reaplicar("config alterada");
+            DayLength.SettingChanged += (_, __) => Reaplicar("config alterada");
+            NightLength.SettingChanged += (_, __) => Reaplicar("config alterada");
+
             SynchronizationManager.OnConfigurationSynchronized += (_, e) =>
-            {
-                if (e.InitialSynchronization)
-                    Log.LogInfo("Configurações sincronizadas do servidor.");
-                else
-                    Log.LogInfo("Configurações atualizadas do servidor.");
-            };
+                Reaplicar(e.InitialSynchronization
+                    ? "configuracao recebida do servidor"
+                    : "configuracao atualizada pelo servidor");
 
-            // Aplica patches Harmony
             harmony = new Harmony(PluginGUID);
             harmony.PatchAll();
+        }
 
-            Log.LogInfo("MrDayNight ativo e aguardando inicialização do EnvMan.");
+        /// <summary>
+        /// Quem controla o ciclo precisa ficar claro no log — tanto para quem usa
+        /// outro mod de mundo quanto para quem nao usa nenhum.
+        /// </summary>
+        private static void AvisarSobreOutrosMods()
+        {
+            if (Chainloader.PluginInfos.TryGetValue(GuidZenWorldSettings, out var zen))
+            {
+                Log.LogWarning(
+                    $"{zen.Metadata.Name} {zen.Metadata.Version} tambem controla a duracao do dia " +
+                    "(a opcao 'Day Length Seconds' dele). O MrDayNight assume o controle do ciclo " +
+                    "e sobrescreve aquele valor — ajuste o ciclo aqui, nao la. " +
+                    "Para devolver o controle, desligue 'Tempo.Enabled' nesta configuracao.");
+            }
+            else
+            {
+                Log.LogInfo("Nenhum outro mod de ciclo detectado; o MrDayNight esta no controle.");
+            }
+        }
+
+        private static void Reaplicar(string motivo)
+        {
+            var env = EnvMan.instance;
+            if (env == null) return;      // ainda nao ha mundo; o Awake do EnvMan cuida
+            AplicarCiclo(env, motivo);
+        }
+
+        internal static void AplicarCiclo(EnvMan env, string motivo)
+        {
+            if (!Ativo)
+            {
+                Log.LogInfo($"Desligado ({motivo}); o ciclo original do jogo foi mantido.");
+                return;
+            }
+
+            env.m_dayLengthSec = (long)CicloTotal;
+
+            float amanhecer = Ciclo.Amanhecer;
+            Log.LogInfo(
+                $"Ciclo aplicado ({motivo}): dia {DayLength.Value:0}s + noite {NightLength.Value:0}s " +
+                $"= {CicloTotal:0}s. Amanhece em {amanhecer:P1} do ciclo, anoitece em {Ciclo.Anoitecer:P1} " +
+                $"(vanilla: 15.0% e 85.0%).");
         }
 
         private void OnDestroy() => harmony?.UnpatchSelf();
