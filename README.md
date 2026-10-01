@@ -1,4 +1,6 @@
 # 🕰️ MrDayNight
+
+[![Discord](https://img.shields.io/badge/Discord-GenesisMods-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/TZ785sYtgx)
 **by Genesis Project**
 
 > *Take control of Valheim’s time itself — extend the light, embrace the dark.*
@@ -138,3 +140,7 @@ NightLength = 600
 ### 🐉 License
 This project is open source under the MIT License.  
 Feel free to modify or redistribute, crediting **Genesis Project**.
+
+## Community and support
+
+Questions, bug reports and release news on the **[GenesisMods Discord](https://discord.gg/TZ785sYtgx)**.
